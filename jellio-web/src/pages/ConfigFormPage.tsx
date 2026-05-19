@@ -24,7 +24,7 @@ const ConfigFormPage: FC<Props> = ({ serverInfo }) => {
           certificate or use localhost (127.0.0.1) to install this addon.
         </div>
       )}
-  <ConfigForm serverInfo={serverInfo} />
+      <ConfigForm serverInfo={serverInfo} />
     </div>
   );
 };

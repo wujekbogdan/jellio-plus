@@ -9,9 +9,10 @@ export const getServerInfo = async (
     const headers: Record<string, string> = {};
     if (token) {
       const deviceId = getOrCreateDeviceId();
-      headers['Authorization'] = `MediaBrowser Token="${token}"`;
+      headers.Authorization = `MediaBrowser Token="${token}"`;
       headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] = `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
+      headers['X-Emby-Authorization'] =
+        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
     const response = await axios.get(`${getBaseUrl()}/server-info`, {
@@ -38,9 +39,10 @@ export const startAddonSession = async (token?: string): Promise<string> => {
     const headers: Record<string, string> = {};
     if (token) {
       const deviceId = getOrCreateDeviceId();
-      headers['Authorization'] = `MediaBrowser Token="${token}"`;
+      headers.Authorization = `MediaBrowser Token="${token}"`;
       headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] = `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
+      headers['X-Emby-Authorization'] =
+        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
     const response = await axios.post(`${getBaseUrl()}/start-session`, null, {
@@ -70,9 +72,10 @@ export const saveConfigToServer = async (
     const headers: Record<string, string> = {};
     if (token) {
       const deviceId = getOrCreateDeviceId();
-      headers['Authorization'] = `MediaBrowser Token="${token}"`;
+      headers.Authorization = `MediaBrowser Token="${token}"`;
       headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] = `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
+      headers['X-Emby-Authorization'] =
+        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
     await axios.post(`${getBaseUrl()}/save-config`, config, {
@@ -92,9 +95,10 @@ export const getConfigFromServer = async (
     const headers: Record<string, string> = {};
     if (token) {
       const deviceId = getOrCreateDeviceId();
-      headers['Authorization'] = `MediaBrowser Token="${token}"`;
+      headers.Authorization = `MediaBrowser Token="${token}"`;
       headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] = `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
+      headers['X-Emby-Authorization'] =
+        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
     const response = await axios.get(`${getBaseUrl()}/get-config`, {
@@ -123,9 +127,10 @@ export const getLogs = async (
     const headers: Record<string, string> = {};
     if (token) {
       const deviceId = getOrCreateDeviceId();
-      headers['Authorization'] = `MediaBrowser Token="${token}"`;
+      headers.Authorization = `MediaBrowser Token="${token}"`;
       headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] = `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
+      headers['X-Emby-Authorization'] =
+        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
     const params = limit ? { limit } : {};
@@ -147,9 +152,10 @@ export const clearLogs = async (token?: string): Promise<void> => {
     const headers: Record<string, string> = {};
     if (token) {
       const deviceId = getOrCreateDeviceId();
-      headers['Authorization'] = `MediaBrowser Token="${token}"`;
+      headers.Authorization = `MediaBrowser Token="${token}"`;
       headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] = `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
+      headers['X-Emby-Authorization'] =
+        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
     await axios.post(`${getBaseUrl()}/logs/clear`, null, {
@@ -161,4 +167,3 @@ export const clearLogs = async (token?: string): Promise<void> => {
     throw error;
   }
 };
-

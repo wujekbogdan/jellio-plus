@@ -24,7 +24,10 @@ const useServerInfo = (): Maybe<ServerInfo> => {
           setServerInfo(null);
           return;
         }
-        console.warn('Non-auth error fetching server info (will not redirect):', error);
+        console.warn(
+          'Non-auth error fetching server info (will not redirect):',
+          error,
+        );
         // Keep in loading state to avoid redirect loop; retry once quickly
         if (!attemptedOnceRef.current) {
           attemptedOnceRef.current = true;

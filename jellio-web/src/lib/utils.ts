@@ -6,7 +6,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getBaseUrl(): string {
-  var match = window.location.href.match(/.*?\/jelliopp/);
+  const match = /.*?\/jelliopp/.exec(window.location.href);
   if (!match) {
     throw new Error('URL must include /jelliopp');
   }
@@ -18,7 +18,9 @@ export function getOrCreateDeviceId(): string {
   let id = localStorage.getItem(key);
   if (!id) {
     // Simple, stable identifier for header metadata
-    id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    id = crypto.randomUUID
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     localStorage.setItem(key, id);
   }
   return id;

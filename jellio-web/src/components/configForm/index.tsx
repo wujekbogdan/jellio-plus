@@ -4,10 +4,14 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { encode } from 'js-base64';
 import { Clipboard, Globe, Monitor, Save } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { LibrariesField, ServerNameField, JellyseerrFieldset } from '@/components/configForm/fields';
+import {
+  LibrariesField,
+  ServerNameField,
+  JellyseerrFieldset,
+} from '@/components/configForm/fields';
 import { formSchema } from '@/components/configForm/formSchema.tsx';
-import { Button } from '@/components/ui/button.tsx';
 import { LogsViewer } from '@/components/logsViewer';
+import { Button } from '@/components/ui/button.tsx';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -15,9 +19,12 @@ import {
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
 import { Form } from '@/components/ui/form';
-import { getBaseUrl } from '@/lib/utils';
-import { startAddonSession, saveConfigToServer } from '@/services/backendService';
 import { useConfigStorage } from '@/hooks/useConfigStorage';
+import { getBaseUrl } from '@/lib/utils';
+import {
+  startAddonSession,
+  saveConfigToServer,
+} from '@/services/backendService';
 import type { ServerInfo } from '@/types';
 
 interface Props {
@@ -28,7 +35,7 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
   const [copied, setCopied] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -42,7 +49,11 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
   });
 
   // Load and save config to localStorage and server
-  const { saveConfig } = useConfigStorage(form, serverInfo.accessToken, serverInfo.libraries);
+  const { saveConfig } = useConfigStorage(
+    form,
+    serverInfo.accessToken,
+    serverInfo.libraries,
+  );
 
   const serverName = form.watch('serverName');
 
@@ -53,13 +64,14 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
     setSaved(false);
     try {
       const values = form.getValues();
-      
+
       // Strip trailing slashes
-      const stripTrailingSlash = (url: string) => url?.replace(/\/+$/, '') || '';
-      
+      const stripTrailingSlash = (url: string) =>
+        url?.replace(/\/+$/, '') || '';
+
       // Save to localStorage first
       saveConfig();
-      
+
       // Then save to Jellyfin server
       await saveConfigToServer(
         {
@@ -67,11 +79,14 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
           jellyseerrUrl: stripTrailingSlash(values.jellyseerrUrl ?? ''),
           jellyseerrApiKey: values.jellyseerrApiKey ?? '',
           publicBaseUrl: stripTrailingSlash(values.publicBaseUrl ?? ''),
-          selectedLibraries: values.libraries?.map((lib: { key: string }) => lib.key.replace(/-/g, '')) ?? [],
+          selectedLibraries:
+            values.libraries?.map((lib: { key: string }) =>
+              lib.key.replace(/-/g, ''),
+            ) ?? [],
         },
         serverInfo.accessToken,
       );
-      
+
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
     } catch (error) {
@@ -84,13 +99,13 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
 
   const handleInstall = async (action: 'clipboard' | 'web' | 'client') => {
     const values = form.getValues();
-    
+
     // Save config to localStorage before generating addon URL
     saveConfig();
-    
+
     // Helper to strip trailing slashes
     const stripTrailingSlash = (url: string) => url?.replace(/\/+$/, '') || '';
-    
+
     const newToken = await startAddonSession(serverInfo.accessToken);
     const configuration: any = {
       AuthToken: newToken,
@@ -102,7 +117,8 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
     if (values.jellyseerrEnabled && values.jellyseerrUrl) {
       configuration.JellyseerrEnabled = true;
       configuration.JellyseerrUrl = stripTrailingSlash(values.jellyseerrUrl);
-      if (values.jellyseerrApiKey) configuration.JellyseerrApiKey = values.jellyseerrApiKey;
+      if (values.jellyseerrApiKey)
+        configuration.JellyseerrApiKey = values.jellyseerrApiKey;
     }
     if (values.publicBaseUrl) {
       configuration.PublicBaseUrl = stripTrailingSlash(values.publicBaseUrl);
@@ -142,7 +158,11 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
             disabled={saving}
           >
             <Save className="mr-2 h-4 w-4" />
-            {saved ? 'Saved to Jellyfin!' : saving ? 'Saving...' : 'Save Configuration to Jellyfin'}
+            {saved
+              ? 'Saved to Jellyfin!'
+              : saving
+                ? 'Saving...'
+                : 'Save Configuration to Jellyfin'}
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

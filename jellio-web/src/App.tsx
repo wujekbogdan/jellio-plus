@@ -1,7 +1,7 @@
 import { ThemeProvider } from '@/components/themeProvider';
 import useServerInfo from '@/hooks/useServerInfo.ts';
-import ConfigFormPage from '@/pages/ConfigFormPage';
 import { getBaseUrl } from '@/lib/utils';
+import ConfigFormPage from '@/pages/ConfigFormPage';
 
 function App() {
   const serverInfo = useServerInfo();

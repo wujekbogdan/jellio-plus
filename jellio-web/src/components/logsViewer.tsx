@@ -1,6 +1,6 @@
 import { type FC, useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { getLogs, clearLogs, type LogEntry } from '@/services/backendService';
 
 interface LogsViewerProps {
@@ -103,7 +103,9 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
               onClick={fetchLogs}
               disabled={loading}
             >
-              <RefreshCw className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCw
+                className={`mr-2 h-4 w-4 ${loading ? 'animate-spin' : ''}`}
+              />
               {loading ? 'Loading...' : 'Refresh'}
             </Button>
             <Button
@@ -134,7 +136,9 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
                     <span className="text-gray-500 text-xs whitespace-nowrap">
                       {formatTimestamp(log.timestamp)}
                     </span>
-                    <span className={`${getLevelColor(log.level)} whitespace-nowrap`}>
+                    <span
+                      className={`${getLevelColor(log.level)} whitespace-nowrap`}
+                    >
                       [{log.level}]
                     </span>
                     <span className="break-words">{log.message}</span>
@@ -148,4 +152,3 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
     </div>
   );
 };
-

@@ -6,7 +6,9 @@ const useAccessToken = (): Maybe<string> => {
 
   useEffect(() => {
     try {
-      const storedCredentialsString = localStorage.getItem('jellyfin_credentials');
+      const storedCredentialsString = localStorage.getItem(
+        'jellyfin_credentials',
+      );
       if (storedCredentialsString) {
         const parsed = JSON.parse(storedCredentialsString);
 
@@ -20,7 +22,10 @@ const useAccessToken = (): Maybe<string> => {
         }
 
         // Case 2: Direct session-style: { AccessToken: "..." }
-        if (typeof parsed?.AccessToken === 'string' && parsed.AccessToken.length > 0) {
+        if (
+          typeof parsed?.AccessToken === 'string' &&
+          parsed.AccessToken.length > 0
+        ) {
           setAccessToken(parsed.AccessToken as string);
           return;
         }

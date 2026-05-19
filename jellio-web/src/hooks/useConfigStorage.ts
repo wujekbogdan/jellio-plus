@@ -5,14 +5,18 @@ import { getConfigFromServer } from '@/services/backendService';
 const STORAGE_KEY = 'jelliopp_config';
 
 interface StoredConfig {
-  libraries?: Array<{ key: string; name: string; type: string }>;
+  libraries?: { key: string; name: string; type: string }[];
   jellyseerrEnabled?: boolean;
   jellyseerrUrl?: string;
   jellyseerrApiKey?: string;
   publicBaseUrl?: string;
 }
 
-export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string, availableLibraries?: Array<{ key: string; name: string; type: string }>) => {
+export const useConfigStorage = (
+  form: UseFormReturn<any>,
+  accessToken?: string,
+  availableLibraries?: { key: string; name: string; type: string }[],
+) => {
   // Load config from localStorage and server on mount
   useEffect(() => {
     const loadConfig = async () => {
@@ -21,7 +25,7 @@ export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string,
         const stored = localStorage.getItem(STORAGE_KEY);
         if (stored) {
           const config: StoredConfig = JSON.parse(stored);
-          
+
           // Update form with stored values
           if (config.libraries && Array.isArray(config.libraries)) {
             form.setValue('libraries', config.libraries);
@@ -45,7 +49,10 @@ export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string,
           const serverConfig = await getConfigFromServer(accessToken);
           if (serverConfig) {
             if (serverConfig.jellyseerrEnabled !== undefined) {
-              form.setValue('jellyseerrEnabled', serverConfig.jellyseerrEnabled);
+              form.setValue(
+                'jellyseerrEnabled',
+                serverConfig.jellyseerrEnabled,
+              );
             }
             if (serverConfig.jellyseerrUrl) {
               form.setValue('jellyseerrUrl', serverConfig.jellyseerrUrl);
@@ -57,7 +64,11 @@ export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string,
               form.setValue('publicBaseUrl', serverConfig.publicBaseUrl);
             }
             // Load libraries from server config if available
-            if (serverConfig.selectedLibraries && Array.isArray(serverConfig.selectedLibraries) && availableLibraries) {
+            if (
+              serverConfig.selectedLibraries &&
+              Array.isArray(serverConfig.selectedLibraries) &&
+              availableLibraries
+            ) {
               // Convert server library IDs (format: "guidwithoutdashes") to form format
               // Match them with available libraries
               const selectedLibraries = serverConfig.selectedLibraries
@@ -68,10 +79,15 @@ export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string,
                     formattedId = `${id.slice(0, 8)}-${id.slice(8, 12)}-${id.slice(12, 16)}-${id.slice(16, 20)}-${id.slice(20, 32)}`;
                   }
                   // Find matching library
-                  return availableLibraries.find(lib => lib.key === formattedId);
+                  return availableLibraries.find(
+                    (lib) => lib.key === formattedId,
+                  );
                 })
-                .filter((lib): lib is { key: string; name: string; type: string } => lib !== undefined);
-              
+                .filter(
+                  (lib): lib is { key: string; name: string; type: string } =>
+                    lib !== undefined,
+                );
+
               if (selectedLibraries.length > 0) {
                 form.setValue('libraries', selectedLibraries);
               }
@@ -90,10 +106,11 @@ export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string,
   const saveConfig = () => {
     try {
       const values = form.getValues();
-      
+
       // Strip trailing slashes from URLs before saving
-      const stripTrailingSlash = (url: string) => url?.replace(/\/+$/, '') || '';
-      
+      const stripTrailingSlash = (url: string) =>
+        url?.replace(/\/+$/, '') || '';
+
       const config: StoredConfig = {
         libraries: values.libraries || [],
         jellyseerrEnabled: values.jellyseerrEnabled,
@@ -101,7 +118,7 @@ export const useConfigStorage = (form: UseFormReturn<any>, accessToken?: string,
         jellyseerrApiKey: values.jellyseerrApiKey,
         publicBaseUrl: stripTrailingSlash(values.publicBaseUrl),
       };
-      
+
       localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
       return true;
     } catch (error) {

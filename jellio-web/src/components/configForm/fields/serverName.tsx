@@ -10,7 +10,9 @@ import {
 } from '@/components/ui/form.tsx';
 import { Input } from '@/components/ui/input.tsx';
 
-interface Props { form: UseFormReturn<any>; }
+interface Props {
+  form: UseFormReturn<any>;
+}
 
 export const ServerNameField: FC<Props> = ({ form }) => {
   return (

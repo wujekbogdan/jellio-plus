@@ -1,6 +1,5 @@
 import type { FC } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import { Input } from '@/components/ui/input.tsx';
 import { Checkbox } from '@/components/ui/checkbox.tsx';
 import {
   FormControl,
@@ -10,14 +9,19 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form.tsx';
+import { Input } from '@/components/ui/input.tsx';
 
-interface Props { form: UseFormReturn<any>; }
+interface Props {
+  form: UseFormReturn<any>;
+}
 
 export const JellyseerrFieldset: FC<Props> = ({ form }) => {
   const enabled = form.watch('jellyseerrEnabled');
   return (
     <fieldset className="rounded-lg border p-2">
-      <legend className="px-1 text-base font-medium">Jellyseerr integration</legend>
+      <legend className="px-1 text-base font-medium">
+        Jellyseerr integration
+      </legend>
       <FormField
         control={form.control}
         name="jellyseerrEnabled"
@@ -26,11 +30,15 @@ export const JellyseerrFieldset: FC<Props> = ({ form }) => {
             <div>
               <FormLabel>Enable Jellyseerr</FormLabel>
               <FormDescription>
-                Show a "Request via Jellyseerr" option when no stream is available.
+                Show a "Request via Jellyseerr" option when no stream is
+                available.
               </FormDescription>
             </div>
             <FormControl>
-              <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+              <Checkbox
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
             </FormControl>
             <FormMessage />
           </FormItem>
@@ -46,10 +54,16 @@ export const JellyseerrFieldset: FC<Props> = ({ form }) => {
               <FormItem className="flex flex-col">
                 <FormLabel>Jellyseerr Base URL</FormLabel>
                 <FormControl>
-                  <Input placeholder="https://jellyseerr.example.com" {...field} />
+                  <Input
+                    placeholder="https://jellyseerr.example.com"
+                    {...field}
+                  />
                 </FormControl>
                 <FormDescription className="text-xs min-h-[2.5rem]">
-                  <strong>Use your local address. Do not include a trailing slash. (ex. "http://192.168.0.105:5055")</strong>
+                  <strong>
+                    Use your local address. Do not include a trailing slash.
+                    (ex. "http://192.168.0.105:5055")
+                  </strong>
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -62,9 +76,15 @@ export const JellyseerrFieldset: FC<Props> = ({ form }) => {
               <FormItem className="flex flex-col">
                 <FormLabel>Jellyseerr API Key</FormLabel>
                 <FormControl>
-                  <Input type="password" placeholder="paste API key" {...field} />
+                  <Input
+                    type="password"
+                    placeholder="paste API key"
+                    {...field}
+                  />
                 </FormControl>
-                <FormDescription className="text-xs min-h-[2.5rem]">Required for automatic API requests.</FormDescription>
+                <FormDescription className="text-xs min-h-[2.5rem]">
+                  Required for automatic API requests.
+                </FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -76,10 +96,17 @@ export const JellyseerrFieldset: FC<Props> = ({ form }) => {
               <FormItem className="md:col-span-2">
                 <FormLabel>Public Base URL</FormLabel>
                 <FormControl>
-                  <Input placeholder="https://jellyfin.example.com" {...field} />
+                  <Input
+                    placeholder="https://jellyfin.example.com"
+                    {...field}
+                  />
                 </FormControl>
                 <FormDescription className="text-xs">
-                  <strong>Use your Cloudflare Tunnel address to access Jellyfin when not on your local network. (ex. "https://jellyfin.example.com")</strong>
+                  <strong>
+                    Use your Cloudflare Tunnel address to access Jellyfin when
+                    not on your local network. (ex.
+                    "https://jellyfin.example.com")
+                  </strong>
                 </FormDescription>
                 <FormMessage />
               </FormItem>
