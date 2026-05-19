@@ -1,0 +1,3 @@
+cd jellio-web
+npx lint-staged
+npm run typecheck

@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "typecheck": "tsc -b",
+    "prepare": "cd .. && husky jellio-web/.husky"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
@@ -46,6 +48,8 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.5",
     "prettier": "^3.5.3",
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.59.4",
@@ -54,21 +58,5 @@
   },
   "overrides": {
     "merge2": "1.4.0"
-  },
-  "prettier": {
-    "printWidth": 80,
-    "tabWidth": 2,
-    "trailingComma": "all",
-    "singleQuote": true,
-    "semi": true,
-    "importOrder": [
-      "^react$",
-      "<THIRD_PARTY_MODULES>",
-      "^[./]",
-      "^@/"
-    ],
-    "plugins": [
-      "@trivago/prettier-plugin-sort-imports"
-    ]
   }
 }

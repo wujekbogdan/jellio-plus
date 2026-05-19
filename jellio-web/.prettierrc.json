@@ -1,0 +1,9 @@
+{
+  "printWidth": 80,
+  "tabWidth": 2,
+  "trailingComma": "all",
+  "singleQuote": true,
+  "semi": true,
+  "importOrder": ["^react$", "<THIRD_PARTY_MODULES>", "^[./]", "^@/"],
+  "plugins": ["@trivago/prettier-plugin-sort-imports"]
+}
