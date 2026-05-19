@@ -10,7 +10,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.Jellio.Controllers;
 
 [ApiController]
-[Route("jellio")]
+[Route("jelliopp")]
 [Produces(MediaTypeNames.Application.Json)]
 public class AuthController(ISessionManager sessionManager) : ControllerBase
 {
@@ -26,8 +26,8 @@ public class AuthController(ISessionManager sessionManager) : ControllerBase
                 {
                     UserId = userId,
                     DeviceId = Guid.NewGuid().ToString(),
-                    DeviceName = "Jellio",
-                    App = "Jellio",
+                    DeviceName = "Jellio++",
+                    App = "Jellio++",
                     AppVersion = Plugin.Instance?.Version.ToString() ?? "unknown",
                 }
             )

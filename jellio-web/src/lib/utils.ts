@@ -6,15 +6,15 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function getBaseUrl(): string {
-  var match = window.location.href.match(/.*?\/jellio/);
+  var match = window.location.href.match(/.*?\/jelliopp/);
   if (!match) {
-    throw new Error('URL must include /jellio');
+    throw new Error('URL must include /jelliopp');
   }
   return match[0];
 }
 
 export function getOrCreateDeviceId(): string {
-  const key = 'jellio_device_id';
+  const key = 'jelliopp_device_id';
   let id = localStorage.getItem(key);
   if (!id) {
     // Simple, stable identifier for header metadata

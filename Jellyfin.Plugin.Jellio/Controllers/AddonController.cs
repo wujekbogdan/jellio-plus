@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Mime;
+using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
@@ -16,16 +18,20 @@ using MediaBrowser.Controller.Library;
 using MediaBrowser.Model.Dto;
 using MediaBrowser.Model.Entities;
 using MediaBrowser.Model.Querying;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jellyfin.Plugin.Jellio.Controllers;
 
 [ApiController]
 [ConfigAuthorize]
-[Route("jellio/{config}")]
+[Route("jelliopp/{config}")]
 [Produces(MediaTypeNames.Application.Json)]
 public class AddonController : ControllerBase
 {
+    private static readonly string PluginVersion =
+        Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
+
     private readonly IUserManager _userManager;
     private readonly IUserViewManager _userViewManager;
     private readonly IDtoService _dtoService;
@@ -107,7 +113,7 @@ public class AddonController : ControllerBase
 
         var meta = new MetaDto
         {
-            Id = dto.ProviderIds.TryGetValue("Imdb", out var idVal) ? idVal : $"jellio:{dto.Id}",
+            Id = dto.ProviderIds.TryGetValue("Imdb", out var idVal) ? idVal : $"jelliopp:{dto.Id}",
             Type = stremioType.ToString().ToLower(CultureInfo.InvariantCulture),
             Name = dto.Name,
             Poster = $"{baseUrl}/Items/{dto.Id}/Images/Primary",
@@ -137,7 +143,7 @@ public class AddonController : ControllerBase
         return meta;
     }
 
-    private OkObjectResult GetStreamsResult(Guid userId, IReadOnlyList<BaseItem> items, string authToken)
+    private OkObjectResult GetStreamsResult(Guid userId, IReadOnlyList<BaseItem> items, string authToken, string? publicBaseUrl = null)
     {
         var user = _userManager.GetUserById(userId);
         if (user == null)
@@ -147,7 +153,7 @@ public class AddonController : ControllerBase
         }
 
         LogBuffer.AddLog($"[Stream] Processing {items.Count} item(s) for user {user.Username}", LogLevel.Info);
-        var baseUrl = GetBaseUrl();
+        var baseUrl = GetBaseUrl(publicBaseUrl);
         LogBuffer.AddLog($"[Stream] Base URL: {baseUrl}", LogLevel.Info);
         var dtoOptions = new DtoOptions(true);
         var dtos = _dtoService.GetBaseItemDtos(items, dtoOptions, user);
@@ -169,13 +175,39 @@ public class AddonController : ControllerBase
 
             return dto.MediaSources.Select(source =>
             {
-                var streamUrl = $"{baseUrl}/videos/{dto.Id}/stream?mediaSourceId={source.Id}&api_key={Uri.EscapeDataString(authToken)}&AudioCodec=aac&TranscodingMaxAudioChannels=2&CopyTimestamps=true";
+                /*
+                 * Jellyfin's HLS endpoint requires the caller to declare which codecs the player supports.
+                 * It compares these against the media file's codecs to decide whether to pass through without re-encoding or transcode.
+                 *
+                 * Stremio's addon protocol has no mechanism for the client to advertise its codec capabilities to addons, so we hardcode them here. The lists below reflect what Stremio's players can decode. This is the same pattern every Jellyfin client follows - e.g. jellyfin-web builds its codec list.
+                 * See: https://github.com/jellyfin/jellyfin-web/blob/285196329/src/scripts/browserDeviceProfile.js#L914-L925
+                 *
+                 * Without these params Jellyfin would fall back to "m3u8" as the audio codec name, producing invalid FFmpeg commands.
+                 * See: https://github.com/jellyfin/jellyfin/issues/12926
+                 */
+                string[] videoCodecs = ["h264", "hevc", "av1"];
+                string[] audioCodecs = ["aac", "mp3", "ac3", "eac3", "flac", "opus"];
+                var query = QueryString.Create(new Dictionary<string, string?>
+                {
+                    ["mediaSourceId"] = source.Id,
+                    ["api_key"] = authToken,
+                    ["videoCodec"] = string.Join(',', videoCodecs),
+                    ["audioCodec"] = string.Join(',', audioCodecs),
+                });
+                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{query}";
                 LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
                 return new StreamDto
                 {
                     Url = streamUrl,
-                    Name = "Jellio",
+                    Name = "Jellio++",
                     Description = source.Name,
+                    BehaviorHints = new BehaviorHintsDto
+                    {
+                        Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
+                        VideoSize = source.Size,
+                        VideoHash = OpenSubtitlesHash.ComputeFromPath(source.Path),
+                        NotWebReady = true,
+                    },
                 };
             });
         }).ToList();
@@ -220,9 +252,9 @@ public class AddonController : ControllerBase
         var descriptionText = $"Play movies and series from {config.ServerName}: {string.Join(", ", catalogNames)}";
         var manifest = new
         {
-            id = "com.stremio.jellio",
-            version = "0.0.1",
-            name = "Jellio",
+            id = "com.stremio.jelliopp",
+            version = PluginVersion,
+            name = "Jellio++",
             description = descriptionText,
             resources = new object[]
             {
@@ -232,11 +264,11 @@ public class AddonController : ControllerBase
                 {
                     name = "meta",
                     types = new[] { "movie", "series" },
-                    idPrefixes = new[] { "jellio" },
+                    idPrefixes = new[] { "jelliopp" },
                 },
             },
             types = new[] { "movie", "series" },
-            idPrefixes = new[] { "tt", "jellio" },
+            idPrefixes = new[] { "tt", "jelliopp" },
             contactEmail = "support@jellio.stream",
             behaviorHints = new { configurable = true },
             catalogs,
@@ -307,13 +339,13 @@ public class AddonController : ControllerBase
         };
         var result = folder.GetItems(query);
         var dtos = _dtoService.GetBaseItemDtos(result.Items, dtoOptions, user);
-    var baseUrl = GetBaseUrl();
+        var baseUrl = GetBaseUrl(config.PublicBaseUrl);
         var metas = dtos.Select(dto => MapToMeta(dto, stremioType, baseUrl));
 
         return Ok(new { metas });
     }
 
-    [HttpGet("meta/{stremioType}/jellio:{mediaId:guid}.json")]
+    [HttpGet("meta/{stremioType}/jelliopp:{mediaId:guid}.json")]
     public IActionResult GetMeta(
         [ConfigFromBase64Json] ConfigModel config,
         StremioType stremioType,
@@ -339,7 +371,7 @@ public class AddonController : ControllerBase
             Fields = [ItemFields.ProviderIds, ItemFields.Overview, ItemFields.Genres],
         };
         var dto = _dtoService.GetBaseItemDto(item, dtoOptions, user);
-        var baseUrl = GetBaseUrl();
+        var baseUrl = GetBaseUrl(config.PublicBaseUrl);
         var meta = MapToMeta(dto, stremioType, baseUrl, includeDetails: true);
 
         if (stremioType is StremioType.Series)
@@ -354,7 +386,7 @@ public class AddonController : ControllerBase
             var dtos = _dtoService.GetBaseItemDtos(episodes, seriesItemOptions, user);
             var videos = dtos.Select(episode => new VideoDto
             {
-                Id = $"jellio:{episode.Id}",
+                Id = $"jelliopp:{episode.Id}",
                 Title = episode.Name,
                 Thumbnail = $"{baseUrl}/Items/{episode.Id}/Images/Primary",
                 Available = true,
@@ -369,7 +401,7 @@ public class AddonController : ControllerBase
         return Ok(new { meta });
     }
 
-    [HttpGet("stream/{stremioType}/jellio:{mediaId:guid}.json")]
+    [HttpGet("stream/{stremioType}/jelliopp:{mediaId:guid}.json")]
     public IActionResult GetStream(
         [ConfigFromBase64Json] ConfigModel config,
         StremioType stremioType,
@@ -389,7 +421,7 @@ public class AddonController : ControllerBase
         }
 
         LogBuffer.AddLog($"[Stream] Found item: {item.Name} (Type: {item.GetType().Name}, Id: {item.Id})", LogLevel.Info);
-        var result = GetStreamsResult(userId, [item], config.AuthToken);
+        var result = GetStreamsResult(userId, [item], config.AuthToken, config.PublicBaseUrl);
         LogBuffer.AddLog($"[Stream] Returning stream result for {item.Name}", LogLevel.Info);
         return result;
     }
@@ -424,7 +456,7 @@ public class AddonController : ControllerBase
                 if (!string.IsNullOrWhiteSpace(title))
                 {
                     var baseUrl = GetBaseUrl(config.PublicBaseUrl);
-                    var requestUrl = $"{baseUrl}/jellio/{Request.RouteValues["config"]}/jellyseerr?type=movie&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}";
+                    var requestUrl = $"{baseUrl}/jelliopp/{Request.RouteValues["config"]}/jellyseerr?type=movie&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}";
                     var streams = new[]
                     {
                         new { url = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
@@ -436,7 +468,7 @@ public class AddonController : ControllerBase
             return Ok(new { streams = Array.Empty<object>() });
         }
 
-        return GetStreamsResult(userId, items, config.AuthToken);
+        return GetStreamsResult(userId, items, config.AuthToken, config.PublicBaseUrl);
     }
 
     [HttpGet("stream/series/tt{imdbId}:{seasonNum:int}:{episodeNum:int}.json")]
@@ -475,7 +507,7 @@ public class AddonController : ControllerBase
                 if (!string.IsNullOrWhiteSpace(title))
                 {
                     var baseUrl = GetBaseUrl(config.PublicBaseUrl);
-                    var requestUrl = $"{baseUrl}/jellio/{Request.RouteValues["config"]}/jellyseerr?type=tv&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}&season={seasonNum}&episode={episodeNum}";
+                    var requestUrl = $"{baseUrl}/jelliopp/{Request.RouteValues["config"]}/jellyseerr?type=tv&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}&season={seasonNum}&episode={episodeNum}";
                     var streams = new[]
                     {
                         new { url = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
@@ -510,7 +542,7 @@ public class AddonController : ControllerBase
                 if (!string.IsNullOrWhiteSpace(title))
                 {
                     var baseUrl = GetBaseUrl(config.PublicBaseUrl);
-                    var requestUrl = $"{baseUrl}/jellio/{Request.RouteValues["config"]}/jellyseerr?type=tv&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}&season={seasonNum}&episode={episodeNum}";
+                    var requestUrl = $"{baseUrl}/jelliopp/{Request.RouteValues["config"]}/jellyseerr?type=tv&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}&season={seasonNum}&episode={episodeNum}";
                     var streams = new[]
                     {
                         new { url = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
@@ -523,6 +555,6 @@ public class AddonController : ControllerBase
         }
 
         LogBuffer.AddLog($"[Stream] Returning streams for {episodeItems.Count} episode(s)", LogLevel.Info);
-        return GetStreamsResult(userId, episodeItems, config.AuthToken);
+        return GetStreamsResult(userId, episodeItems, config.AuthToken, config.PublicBaseUrl);
     }
 }

@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import { getConfigFromServer } from '@/services/backendService';
 
-const STORAGE_KEY = 'jellio_config';
+const STORAGE_KEY = 'jelliopp_config';
 
 interface StoredConfig {
   libraries?: Array<{ key: string; name: string; type: string }>;

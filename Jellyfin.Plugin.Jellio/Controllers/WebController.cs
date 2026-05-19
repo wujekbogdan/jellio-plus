@@ -17,7 +17,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace Jellyfin.Plugin.Jellio.Controllers;
 
 [ApiController]
-[Route("jellio")]
+[Route("jelliopp")]
 public class WebController : ControllerBase
 {
     private readonly IUserManager _userManager;

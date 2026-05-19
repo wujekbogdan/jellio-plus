@@ -15,7 +15,7 @@ namespace Jellyfin.Plugin.Jellio.Controllers;
 
 [ApiController]
 [ConfigAuthorize]
-[Route("jellio/{config}/jellyseerr")]
+[Route("jelliopp/{config}/jellyseerr")]
 public class RequestController : ControllerBase
 {
     // Simple in-memory cache to prevent duplicate requests (userId:imdbId:type -> timestamp)

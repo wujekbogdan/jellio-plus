@@ -12,4 +12,8 @@ public class StreamDto
 
     [JsonPropertyName("description")]
     public required string Description { get; set; }
+
+    [JsonPropertyName("behaviorHints")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public BehaviorHintsDto? BehaviorHints { get; set; }
 }

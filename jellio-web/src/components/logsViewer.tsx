@@ -79,7 +79,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
         className="w-full flex items-center justify-between p-4 hover:bg-accent transition-colors"
       >
         <div className="flex items-center gap-2">
-          <span className="font-semibold">Jellio Logs</span>
+          <span className="font-semibold">Jellio++ Logs</span>
           {logs.length > 0 && (
             <span className="text-sm text-muted-foreground">
               ({logs.length} entries)

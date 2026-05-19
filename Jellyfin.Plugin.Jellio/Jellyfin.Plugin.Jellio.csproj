@@ -8,11 +8,14 @@
     <Nullable>enable</Nullable>
     <AnalysisMode>AllEnabledByDefault</AnalysisMode>
     <CodeAnalysisRuleSet>../jellyfin.ruleset</CodeAnalysisRuleSet>
-    <Version>1.1.7</Version>
-    <AssemblyVersion>1.1.7.0</AssemblyVersion>
-    <FileVersion>1.1.7.0</FileVersion>
+    <!-- Version is set by jprm from the git tag at release time -->
+    <Version Condition="'$(Version)' == ''">0.0.0-dev</Version>
     <Description>Jellyfin to Stremio bridge - stream your personal media library through Stremio.</Description>
   </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Jellyfin.Plugin.Jellio.Tests" />
+  </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Jellyfin.Controller" Version="[10.11.0,10.12.0)" />
