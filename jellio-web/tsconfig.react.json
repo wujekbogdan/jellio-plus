@@ -1,0 +1,9 @@
+{
+  "extends": "@tsconfig/vite-react/tsconfig.json",
+  "compilerOptions": {
+    "composite": true,
+    "strict": true,
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src"]
+}

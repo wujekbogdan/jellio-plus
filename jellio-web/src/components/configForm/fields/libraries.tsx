@@ -1,5 +1,5 @@
-import { FC } from 'react';
-import { UseFormReturn } from 'react-hook-form';
+import type { FC } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
 import { Checkbox } from '@/components/ui/checkbox.tsx';
 import {
   FormControl,

@@ -35,6 +35,8 @@
   "devDependencies": {
     "@eslint/js": "^9.22.0",
     "@trivago/prettier-plugin-sort-imports": "^5.2.2",
+    "@tsconfig/node24": "^24.0.4",
+    "@tsconfig/vite-react": "^8.0.6",
     "@types/node": "^22.14.1",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
@@ -45,8 +47,8 @@
     "eslint-plugin-react-refresh": "^0.4.19",
     "globals": "^16.0.0",
     "prettier": "^3.5.3",
-    "typescript": "~5.7.2",
-    "typescript-eslint": "^8.26.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.59.4",
     "vite": "^6.3.0",
     "vite-plugin-singlefile": "^2.2.0"
   },

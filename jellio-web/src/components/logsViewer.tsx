@@ -1,4 +1,4 @@
-import { FC, useEffect, useState } from 'react';
+import { type FC, useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
 import { getLogs, clearLogs, type LogEntry } from '@/services/backendService';
