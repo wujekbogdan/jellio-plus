@@ -4,8 +4,11 @@ obj/
 .idea/
 artifacts
 server/
+media/*
+!media/.gitkeep
 config.html
 !Jellyfin.Plugin.Jellio/Web/config.html
+Jellyfin.Plugin.Jellio/Web/index.html
 .aider*
 logs
 *.log

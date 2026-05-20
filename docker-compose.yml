@@ -1,0 +1,52 @@
+services:
+  jellyfin:
+    image: jellyfin/jellyfin:10.11.8
+    ports:
+      - "8096:8096"
+    volumes:
+      - jellyfin-data:/config
+      - ./media:/data:ro
+      - ./Jellyfin.Plugin.Jellio/bin/Debug/net9.0/Jellyfin.Plugin.Jellio.dll:/config/plugins/Jellio/Jellyfin.Plugin.Jellio.dll:ro
+
+  stremio:
+    image: stremio/server:v4.20.18
+    ports:
+      - "11470:11470"
+    environment:
+      NO_CORS: 1
+      IPADDRESS: 0.0.0.0
+    volumes:
+      - stremio-data:/root/.stremio-server
+
+  node-builder:
+    image: node:24-alpine
+    profiles: [build]
+    working_dir: /web
+    volumes:
+      - ./jellio-web:/web
+      - node-modules:/web/node_modules
+      - npm-cache:/root/.npm
+      - ./Jellyfin.Plugin.Jellio/Web:/out
+    command: sh -c "npm ci && npm run build && cp dist/index.html /out/index.html"
+
+  dotnet-builder:
+    image: mcr.microsoft.com/dotnet/sdk:9.0-alpine
+    profiles: [build]
+    working_dir: /src
+    depends_on:
+      node-builder:
+        condition: service_completed_successfully
+    volumes:
+      - ./Jellyfin.Plugin.Jellio:/src/Jellyfin.Plugin.Jellio
+      - ./jellyfin.ruleset:/src/jellyfin.ruleset:ro
+      - nuget-cache:/.nuget
+    environment:
+      NUGET_PACKAGES: /.nuget/packages
+    command: dotnet build Jellyfin.Plugin.Jellio -c Debug
+
+volumes:
+  jellyfin-data:
+  stremio-data:
+  node-modules:
+  npm-cache:
+  nuget-cache:

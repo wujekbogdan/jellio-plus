@@ -45,3 +45,26 @@ NOTICE: Your Jellyfin instance needs to be reachable over HTTPS because Stremio 
 7. (Optional) Input your local Jellyseerr url (e.g. http://192.168.0.105:5055) and your Jellyseerr API key. Also include your Public URL for Jellyfin (e.g. https://jellyfin.yourserver.com)
 8. Click "Save Configuration for Jellyfin"
 9. Lastly, click "Install." Copy that link and paste it in your Stremio addons. You're all done!
+
+## Development
+
+### Backend stack
+
+Build the plugin and start Jellyfin + Stremio:
+
+```bash
+docker compose run --rm dotnet-builder
+docker compose up -d
+```
+
+Jellyfin: http://localhost:8096. Stremio: http://localhost:11470. Test media goes in `./media/`.
+
+### Plugin UI
+
+```bash
+cd jellio-web
+npm install
+npm run dev
+```
+
+Served at http://localhost:5173/jelliopp/. All API calls are mocked with MSW; the UI does not connect to any backend.
