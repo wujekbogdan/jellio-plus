@@ -27,6 +27,16 @@ import {
 } from '@/services/backendService';
 import type { ServerInfo } from '@/types';
 
+interface AddonConfiguration {
+  AuthToken: string;
+  LibrariesGuids: string[];
+  ServerName: string;
+  JellyseerrEnabled?: boolean;
+  JellyseerrUrl?: string;
+  JellyseerrApiKey?: string;
+  PublicBaseUrl?: string;
+}
+
 interface Props {
   serverInfo: ServerInfo;
 }
@@ -107,7 +117,7 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
     const stripTrailingSlash = (url: string) => url?.replace(/\/+$/, '') || '';
 
     const newToken = await startAddonSession(serverInfo.accessToken);
-    const configuration: any = {
+    const configuration: AddonConfiguration = {
       AuthToken: newToken,
       LibrariesGuids: values.libraries.map((lib) =>
         lib.key.replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, '$1-$2-$3-$4-$5'),
@@ -126,7 +136,7 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
     const encodedConfiguration = encode(JSON.stringify(configuration), true);
     const addonUrl = `${getBaseUrl()}/${encodedConfiguration}/manifest.json`;
     if (action === 'clipboard') {
-      navigator.clipboard.writeText(addonUrl);
+      await navigator.clipboard.writeText(addonUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 1000);
     } else if (action === 'web') {
@@ -154,7 +164,7 @@ const ConfigForm: FC<Props> = ({ serverInfo }) => {
             type="button"
             variant="outline"
             className="w-full max-w-md"
-            onClick={handleSaveToServer}
+            onClick={() => void handleSaveToServer()}
             disabled={saving}
           >
             <Save className="mr-2 h-4 w-4" />

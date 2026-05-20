@@ -15,4 +15,4 @@ export const formSchema = z.object({
   publicBaseUrl: z.string().url().or(z.literal('')).default(''),
 });
 
-export type ConfigFormType = z.infer<typeof formSchema>;
+export type ConfigFormType = z.input<typeof formSchema>;

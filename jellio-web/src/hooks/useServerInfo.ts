@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import axios from 'axios';
 import useAccessToken from '@/hooks/useAccessToken.ts';
 import { getServerInfo } from '@/services/backendService.ts';
 import type { ServerInfo, Maybe } from '@/types';
@@ -16,10 +17,12 @@ const useServerInfo = (): Maybe<ServerInfo> => {
         const info = await getServerInfo(accessToken ?? undefined);
         if (cancelled) return;
         setServerInfo({ accessToken: accessToken ?? '', ...info });
-      } catch (error: any) {
+      } catch (error: unknown) {
         if (cancelled) return;
         // Only treat explicit auth failures as unauthenticated
-        const status = error?.response?.status as number | undefined;
+        const status = axios.isAxiosError(error)
+          ? error.response?.status
+          : undefined;
         if (status === 401 || status === 403) {
           setServerInfo(null);
           return;

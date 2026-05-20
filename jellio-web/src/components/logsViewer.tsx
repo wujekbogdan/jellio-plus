@@ -1,4 +1,4 @@
-import { type FC, useEffect, useState } from 'react';
+import { type FC, useCallback, useEffect, useState } from 'react';
 import { ChevronDown, ChevronUp, RefreshCw, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getLogs, clearLogs, type LogEntry } from '@/services/backendService';
@@ -13,7 +13,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
   const [loading, setLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     if (!accessToken) return;
 
     setLoading(true);
@@ -25,7 +25,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [accessToken]);
 
   const handleClearLogs = async () => {
     if (!accessToken) return;
@@ -40,16 +40,16 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
 
   useEffect(() => {
     if (isOpen) {
-      fetchLogs();
+      void fetchLogs();
     }
-  }, [isOpen, accessToken]);
+  }, [isOpen, fetchLogs]);
 
   useEffect(() => {
     if (isOpen && autoRefresh) {
-      const interval = setInterval(fetchLogs, 2000);
+      const interval = setInterval(() => void fetchLogs(), 2000);
       return () => clearInterval(interval);
     }
-  }, [isOpen, autoRefresh, accessToken]);
+  }, [isOpen, autoRefresh, fetchLogs]);
 
   const getLevelColor = (level: string) => {
     switch (level) {
@@ -100,7 +100,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
               type="button"
               variant="outline"
               size="sm"
-              onClick={fetchLogs}
+              onClick={() => void fetchLogs()}
               disabled={loading}
             >
               <RefreshCw
@@ -112,7 +112,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
               type="button"
               variant="outline"
               size="sm"
-              onClick={handleClearLogs}
+              onClick={() => void handleClearLogs()}
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Clear

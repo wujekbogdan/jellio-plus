@@ -15,18 +15,21 @@ export const getServerInfo = async (
         `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
-    const response = await axios.get(`${getBaseUrl()}/server-info`, {
+    const response = await axios.get<{
+      name: string;
+      libraries: { Name: string; Id: string; CollectionType: string }[];
+    }>(`${getBaseUrl()}/server-info`, {
       headers,
       withCredentials: true, // Include cookies for Jellyfin session auth
     });
 
     return {
       serverName: response.data.name,
-      libraries: response.data.libraries.map(
-        (lib: { Name: string; Id: string; CollectionType: string }) => {
-          return { name: lib.Name, key: lib.Id, type: lib.CollectionType };
-        },
-      ),
+      libraries: response.data.libraries.map((lib) => ({
+        name: lib.Name,
+        key: lib.Id,
+        type: lib.CollectionType,
+      })),
     };
   } catch (error) {
     console.error('Error while getting server info:', error);
@@ -45,10 +48,14 @@ export const startAddonSession = async (token?: string): Promise<string> => {
         `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
-    const response = await axios.post(`${getBaseUrl()}/start-session`, null, {
-      headers,
-      withCredentials: true,
-    });
+    const response = await axios.post<{ accessToken: string }>(
+      `${getBaseUrl()}/start-session`,
+      null,
+      {
+        headers,
+        withCredentials: true,
+      },
+    );
     return response.data.accessToken;
   } catch (error) {
     console.error('Error starting new session:', error);
@@ -101,10 +108,13 @@ export const getConfigFromServer = async (
         `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
     }
 
-    const response = await axios.get(`${getBaseUrl()}/get-config`, {
-      headers,
-      withCredentials: true,
-    });
+    const response = await axios.get<SaveConfigData>(
+      `${getBaseUrl()}/get-config`,
+      {
+        headers,
+        withCredentials: true,
+      },
+    );
 
     return response.data;
   } catch (error) {
@@ -134,13 +144,16 @@ export const getLogs = async (
     }
 
     const params = limit ? { limit } : {};
-    const response = await axios.get(`${getBaseUrl()}/logs`, {
-      headers,
-      params,
-      withCredentials: true,
-    });
+    const response = await axios.get<{ logs?: LogEntry[] }>(
+      `${getBaseUrl()}/logs`,
+      {
+        headers,
+        params,
+        withCredentials: true,
+      },
+    );
 
-    return response.data.logs || [];
+    return response.data.logs ?? [];
   } catch (error) {
     console.error('Error getting logs:', error);
     throw error;
