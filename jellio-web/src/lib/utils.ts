@@ -5,7 +5,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function getBaseUrl(): string {
+export const stripTrailingSlash = (url: string) => url.replace(/\/+$/, '');
+
+export function getBaseUrl(publicBaseUrl?: string): string {
+  if (publicBaseUrl && publicBaseUrl.length > 0) {
+    return `${stripTrailingSlash(publicBaseUrl)}/jelliopp`;
+  }
   const match = /.*?\/jelliopp/.exec(window.location.href);
   if (!match) {
     throw new Error('URL must include /jelliopp');

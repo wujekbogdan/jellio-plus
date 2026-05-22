@@ -11,6 +11,7 @@ import {
   FormMessage,
 } from '@/components/ui/form.tsx';
 import { Input } from '@/components/ui/input.tsx';
+import { Label } from '@/components/ui/label.tsx';
 
 interface Props {
   form: UseFormReturn<ConfigFormType>;
@@ -19,10 +20,8 @@ interface Props {
 export const JellyseerrFieldset: FC<Props> = ({ form }) => {
   const enabled = form.watch('jellyseerrEnabled');
   return (
-    <fieldset className="rounded-lg border p-2">
-      <legend className="px-1 text-base font-medium">
-        Jellyseerr integration
-      </legend>
+    <div className="rounded-lg border p-2 space-y-2">
+      <Label className="text-base">Jellyseerr integration</Label>
       <FormField
         control={form.control}
         name="jellyseerrEnabled"
@@ -62,8 +61,8 @@ export const JellyseerrFieldset: FC<Props> = ({ form }) => {
                 </FormControl>
                 <FormDescription className="text-xs min-h-[2.5rem]">
                   <strong>
-                    Use your local address. Do not include a trailing slash.
-                    (ex. "http://192.168.0.105:5055")
+                    Use your local address. Do not include a trailing slash
+                    (e.g. "http://192.168.0.105:5055").
                   </strong>
                 </FormDescription>
                 <FormMessage />
@@ -90,31 +89,8 @@ export const JellyseerrFieldset: FC<Props> = ({ form }) => {
               </FormItem>
             )}
           />
-          <FormField
-            control={form.control}
-            name="publicBaseUrl"
-            render={({ field }) => (
-              <FormItem className="md:col-span-2">
-                <FormLabel>Public Base URL</FormLabel>
-                <FormControl>
-                  <Input
-                    placeholder="https://jellyfin.example.com"
-                    {...field}
-                  />
-                </FormControl>
-                <FormDescription className="text-xs">
-                  <strong>
-                    Use your Cloudflare Tunnel address to access Jellyfin when
-                    not on your local network. (ex.
-                    "https://jellyfin.example.com")
-                  </strong>
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
         </div>
       )}
-    </fieldset>
+    </div>
   );
 };

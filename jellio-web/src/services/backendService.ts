@@ -1,182 +1,128 @@
-import axios from 'axios';
+import { z } from 'zod';
 import { getBaseUrl, getOrCreateDeviceId } from '@/lib/utils';
+import { makeApiFetch } from '@/services/apiFetch';
+import { buildAuthHeaders } from '@/services/authHeaders';
 import type { Library } from '@/types';
 
-export const getServerInfo = async (
-  token?: string,
-): Promise<{ serverName: string; libraries: Library[] }> => {
-  try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      const deviceId = getOrCreateDeviceId();
-      headers.Authorization = `MediaBrowser Token="${token}"`;
-      headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] =
-        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
-    }
+const headersFor = (token: string | undefined) =>
+  token
+    ? buildAuthHeaders({ token, deviceId: getOrCreateDeviceId() })
+    : undefined;
 
-    const response = await axios.get<{
-      name: string;
-      libraries: { Name: string; Id: string; CollectionType: string }[];
-    }>(`${getBaseUrl()}/server-info`, {
-      headers,
-      withCredentials: true, // Include cookies for Jellyfin session auth
-    });
+const serverInfoResponseSchema = z.object({
+  name: z.string(),
+  libraries: z.array(
+    z.object({
+      Name: z.string(),
+      Id: z.string(),
+      CollectionType: z.string(),
+    }),
+  ),
+});
 
-    return {
-      serverName: response.data.name,
-      libraries: response.data.libraries.map((lib) => ({
-        name: lib.Name,
-        key: lib.Id,
-        type: lib.CollectionType,
-      })),
-    };
-  } catch (error) {
-    console.error('Error while getting server info:', error);
-    throw error;
-  }
+const fetchServerInfoResponse = makeApiFetch(serverInfoResponseSchema);
+
+export const getServerInfo = async ({
+  token,
+}: {
+  token?: string;
+}): Promise<{ serverName: string; libraries: Library[] }> => {
+  const response = await fetchServerInfoResponse({
+    url: `${getBaseUrl()}/server-info`,
+    headers: headersFor(token),
+  });
+  return {
+    serverName: response.name,
+    libraries: response.libraries.map((library) => ({
+      name: library.Name,
+      key: library.Id,
+      type: library.CollectionType,
+    })),
+  };
 };
 
-export const startAddonSession = async (token?: string): Promise<string> => {
-  try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      const deviceId = getOrCreateDeviceId();
-      headers.Authorization = `MediaBrowser Token="${token}"`;
-      headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] =
-        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
-    }
+const startSessionResponseSchema = z.object({ accessToken: z.string() });
+const fetchStartSession = makeApiFetch(startSessionResponseSchema);
 
-    const response = await axios.post<{ accessToken: string }>(
-      `${getBaseUrl()}/start-session`,
-      null,
-      {
-        headers,
-        withCredentials: true,
-      },
-    );
-    return response.data.accessToken;
-  } catch (error) {
-    console.error('Error starting new session:', error);
-    throw error;
-  }
+export const startAddonSession = async ({ token }: { token?: string }) => {
+  const response = await fetchStartSession({
+    url: `${getBaseUrl()}/start-session`,
+    method: 'POST',
+    headers: headersFor(token),
+  });
+  return response.accessToken;
 };
 
-export interface SaveConfigData {
-  jellyseerrEnabled: boolean;
-  jellyseerrUrl?: string;
-  jellyseerrApiKey?: string;
-  publicBaseUrl?: string;
-  selectedLibraries?: string[];
-}
+export const saveConfigDataSchema = z.object({
+  jellyseerrEnabled: z.boolean(),
+  jellyseerrUrl: z.string().optional(),
+  jellyseerrApiKey: z.string().optional(),
+  publicBaseUrl: z.string().optional(),
+  selectedLibraries: z.array(z.string()).optional(),
+});
 
-export const saveConfigToServer = async (
-  config: SaveConfigData,
-  token?: string,
-): Promise<void> => {
-  try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      const deviceId = getOrCreateDeviceId();
-      headers.Authorization = `MediaBrowser Token="${token}"`;
-      headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] =
-        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
-    }
+export type SaveConfigData = z.infer<typeof saveConfigDataSchema>;
 
-    await axios.post(`${getBaseUrl()}/save-config`, config, {
-      headers,
-      withCredentials: true,
-    });
-  } catch (error) {
-    console.error('Error saving configuration:', error);
-    throw error;
-  }
+const fetchSaveConfigAck = makeApiFetch(z.unknown());
+
+export const saveConfigToServer = async ({
+  config,
+  token,
+}: {
+  config: SaveConfigData;
+  token?: string;
+}) => {
+  await fetchSaveConfigAck({
+    url: `${getBaseUrl()}/save-config`,
+    method: 'POST',
+    body: config,
+    headers: headersFor(token),
+  });
 };
 
-export const getConfigFromServer = async (
-  token?: string,
-): Promise<SaveConfigData> => {
-  try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      const deviceId = getOrCreateDeviceId();
-      headers.Authorization = `MediaBrowser Token="${token}"`;
-      headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] =
-        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
-    }
+const fetchConfig = makeApiFetch(saveConfigDataSchema.partial());
 
-    const response = await axios.get<SaveConfigData>(
-      `${getBaseUrl()}/get-config`,
-      {
-        headers,
-        withCredentials: true,
-      },
-    );
+export const getConfigFromServer = ({ token }: { token?: string }) =>
+  fetchConfig({
+    url: `${getBaseUrl()}/get-config`,
+    headers: headersFor(token),
+  });
 
-    return response.data;
-  } catch (error) {
-    console.error('Error getting configuration:', error);
-    throw error;
-  }
+const logEntrySchema = z.object({
+  timestamp: z.string(),
+  message: z.string(),
+  level: z.enum(['Info', 'Warning', 'Error']),
+});
+
+export type LogEntry = z.infer<typeof logEntrySchema>;
+
+const logsResponseSchema = z.object({
+  logs: z.array(logEntrySchema).optional(),
+});
+
+const fetchLogsResponse = makeApiFetch(logsResponseSchema);
+
+export const getLogs = async ({
+  token,
+  limit,
+}: {
+  token?: string;
+  limit?: number;
+}) => {
+  const query = limit === undefined ? '' : `?limit=${limit}`;
+  const response = await fetchLogsResponse({
+    url: `${getBaseUrl()}/logs${query}`,
+    headers: headersFor(token),
+  });
+  return response.logs ?? [];
 };
 
-export interface LogEntry {
-  timestamp: string;
-  message: string;
-  level: 'Info' | 'Warning' | 'Error';
-}
+const fetchClearLogsAck = makeApiFetch(z.unknown());
 
-export const getLogs = async (
-  token?: string,
-  limit?: number,
-): Promise<LogEntry[]> => {
-  try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      const deviceId = getOrCreateDeviceId();
-      headers.Authorization = `MediaBrowser Token="${token}"`;
-      headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] =
-        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
-    }
-
-    const params = limit ? { limit } : {};
-    const response = await axios.get<{ logs?: LogEntry[] }>(
-      `${getBaseUrl()}/logs`,
-      {
-        headers,
-        params,
-        withCredentials: true,
-      },
-    );
-
-    return response.data.logs ?? [];
-  } catch (error) {
-    console.error('Error getting logs:', error);
-    throw error;
-  }
-};
-
-export const clearLogs = async (token?: string): Promise<void> => {
-  try {
-    const headers: Record<string, string> = {};
-    if (token) {
-      const deviceId = getOrCreateDeviceId();
-      headers.Authorization = `MediaBrowser Token="${token}"`;
-      headers['X-Emby-Token'] = token;
-      headers['X-Emby-Authorization'] =
-        `MediaBrowser Client="Jellio++", Device="Web", DeviceId="${deviceId}", Version="1.5.0", Token="${token}"`;
-    }
-
-    await axios.post(`${getBaseUrl()}/logs/clear`, null, {
-      headers,
-      withCredentials: true,
-    });
-  } catch (error) {
-    console.error('Error clearing logs:', error);
-    throw error;
-  }
+export const clearLogs = async ({ token }: { token?: string }) => {
+  await fetchClearLogsAck({
+    url: `${getBaseUrl()}/logs/clear`,
+    method: 'POST',
+    headers: headersFor(token),
+  });
 };

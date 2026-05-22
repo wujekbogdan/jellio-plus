@@ -62,7 +62,9 @@ export const useConfigStorage = (
 
         // Then try server config (may override localStorage)
         if (accessToken) {
-          const serverConfig = await getConfigFromServer(accessToken);
+          const serverConfig = await getConfigFromServer({
+            token: accessToken,
+          });
           if (serverConfig.jellyseerrEnabled !== undefined) {
             form.setValue('jellyseerrEnabled', serverConfig.jellyseerrEnabled);
           }

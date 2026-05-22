@@ -18,7 +18,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
 
     setLoading(true);
     try {
-      const fetchedLogs = await getLogs(accessToken, 100);
+      const fetchedLogs = await getLogs({ token: accessToken, limit: 100 });
       setLogs(fetchedLogs);
     } catch (error) {
       console.error('Failed to fetch logs:', error);
@@ -31,7 +31,7 @@ export const LogsViewer: FC<LogsViewerProps> = ({ accessToken }) => {
     if (!accessToken) return;
 
     try {
-      await clearLogs(accessToken);
+      await clearLogs({ token: accessToken });
       setLogs([]);
     } catch (error) {
       console.error('Failed to clear logs:', error);

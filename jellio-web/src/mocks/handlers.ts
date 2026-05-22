@@ -27,4 +27,20 @@ export const handlers = [
       selectedLibraries: [],
     }),
   ),
+  http.post('/jelliopp/start-session', () =>
+    HttpResponse.json({ accessToken: 'dev-addon-session-token' }),
+  ),
+  http.post('/jelliopp/save-config', () => HttpResponse.json({ ok: true })),
+  http.get('/jelliopp/logs', () =>
+    HttpResponse.json({
+      logs: [
+        {
+          timestamp: new Date().toISOString(),
+          message: 'Dev MSW: stub log entry',
+          level: 'Info',
+        },
+      ],
+    }),
+  ),
+  http.post('/jelliopp/logs/clear', () => HttpResponse.json({ ok: true })),
 ];
