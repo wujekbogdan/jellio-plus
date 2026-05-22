@@ -62,21 +62,14 @@ const decodeConfigFromUrl = (url: string): unknown => {
 
 type ClipboardSpy = MockInstance<(text: string) => Promise<void>>;
 
-const withInstallUrlsTest =
-  (setup: {
-    sessionTokenResponse?: string;
-    sessionFailure?: Error;
-    formOverrides?: Partial<ConfigFormType>;
-  }) =>
-  (test: (clipboardSpy: ClipboardSpy) => Promise<void> | void) =>
+const withInstallUrlsHarness =
+  (
+    test: (helpers: {
+      clipboardSpy: ClipboardSpy;
+      renderHost: (overrides?: Partial<ConfigFormType>) => Promise<void>;
+    }) => Promise<void> | void,
+  ) =>
   async () => {
-    if (setup.sessionFailure) {
-      mockedStartAddonSession.mockRejectedValueOnce(setup.sessionFailure);
-    } else {
-      mockedStartAddonSession.mockResolvedValueOnce(
-        setup.sessionTokenResponse ?? 'token',
-      );
-    }
     const clipboardSpy: ClipboardSpy = vi
       .fn<(text: string) => Promise<void>>()
       .mockResolvedValue(undefined);
@@ -84,11 +77,12 @@ const withInstallUrlsTest =
       ...navigator,
       clipboard: { writeText: clipboardSpy },
     });
-    await flushAct(() => {
-      render(<Host defaultValues={buildDefaults(setup.formOverrides)} />);
-    });
+    const renderHost = (overrides?: Partial<ConfigFormType>) =>
+      flushAct(() => {
+        render(<Host defaultValues={buildDefaults(overrides)} />);
+      });
     try {
-      await test(clipboardSpy);
+      await test({ clipboardSpy, renderHost });
     } finally {
       cleanup();
       vi.unstubAllGlobals();
@@ -100,42 +94,46 @@ const withInstallUrlsTest =
 describe('InstallUrls', () => {
   it(
     'should fetch a session token on mount and copy the displayed manifest URL when Copy is clicked',
-    withInstallUrlsTest({ sessionTokenResponse: 'SENTINEL_TOKEN' })(
-      async (clipboardSpy) => {
-        const copyButton = await screen.findByRole('button', {
-          name: /copy stremio addon manifest url/i,
-        });
+    withInstallUrlsHarness(async ({ clipboardSpy, renderHost }) => {
+      mockedStartAddonSession.mockResolvedValueOnce('SENTINEL_TOKEN');
+      await renderHost();
 
-        const manifestInput = screen.getByDisplayValue(
-          /^https:\/\/jellyfin\.example\.com\/jelliopp\/.+\/manifest\.json$/,
-        );
-        const displayedUrl = manifestInput.getAttribute('value') ?? '';
-        expect(decodeConfigFromUrl(displayedUrl)).toMatchObject({
-          AuthToken: 'SENTINEL_TOKEN',
-          ServerName: 'Home Jellyfin',
-          PublicBaseUrl: 'https://jellyfin.example.com',
-        });
+      const copyButton = await screen.findByRole('button', {
+        name: /copy stremio addon manifest url/i,
+      });
 
-        await userEvent.click(copyButton);
+      const manifestInput = screen.getByDisplayValue(
+        /^https:\/\/jellyfin\.example\.com\/jelliopp\/.+\/manifest\.json$/,
+      );
+      const displayedUrl = manifestInput.getAttribute('value') ?? '';
+      expect(decodeConfigFromUrl(displayedUrl)).toMatchObject({
+        AuthToken: 'SENTINEL_TOKEN',
+        ServerName: 'Home Jellyfin',
+        PublicBaseUrl: 'https://jellyfin.example.com',
+      });
 
-        expect(mockedStartAddonSession).toHaveBeenCalledWith({
-          token: 'init-token',
-        });
-        expect(clipboardSpy).toHaveBeenCalledOnce();
-        expect(clipboardSpy.mock.calls[0][0]).toBe(displayedUrl);
-      },
-    ),
+      await userEvent.click(copyButton);
+
+      expect(mockedStartAddonSession).toHaveBeenCalledWith({
+        token: 'init-token',
+      });
+      expect(clipboardSpy).toHaveBeenCalledOnce();
+      expect(clipboardSpy.mock.calls[0][0]).toBe(displayedUrl);
+    }),
   );
 
   it(
     'should show the HTTP error inline and hide install URLs when starting a new addon session fails',
-    withInstallUrlsTest({
-      sessionFailure: new HttpError({
-        status: 503,
-        statusText: 'Service Unavailable',
-        responseBody: { message: 'Jellyfin is restarting' },
-      }),
-    })(async (clipboardSpy) => {
+    withInstallUrlsHarness(async ({ clipboardSpy, renderHost }) => {
+      mockedStartAddonSession.mockRejectedValueOnce(
+        new HttpError({
+          status: 503,
+          statusText: 'Service Unavailable',
+          responseBody: { message: 'Jellyfin is restarting' },
+        }),
+      );
+      await renderHost();
+
       await screen.findByText(/HTTP 503: Jellyfin is restarting/i);
       expect(
         screen.queryByRole('button', {
@@ -148,10 +146,10 @@ describe('InstallUrls', () => {
 
   it(
     'should warn the user when the install base URL is not HTTPS',
-    withInstallUrlsTest({
-      sessionTokenResponse: 'tk',
-      formOverrides: { publicBaseUrl: 'http://jellyfin.lan' },
-    })(async () => {
+    withInstallUrlsHarness(async ({ renderHost }) => {
+      mockedStartAddonSession.mockResolvedValueOnce('tk');
+      await renderHost({ publicBaseUrl: 'http://jellyfin.lan' });
+
       expect(
         await screen.findByText(/Stremio requires HTTPS addon URLs/i),
       ).toBeTruthy();
@@ -160,7 +158,10 @@ describe('InstallUrls', () => {
 
   it(
     'should not warn when the install base URL is HTTPS',
-    withInstallUrlsTest({ sessionTokenResponse: 'tk' })(async () => {
+    withInstallUrlsHarness(async ({ renderHost }) => {
+      mockedStartAddonSession.mockResolvedValueOnce('tk');
+      await renderHost();
+
       await screen.findByRole('button', {
         name: /copy stremio addon manifest url/i,
       });
@@ -172,7 +173,10 @@ describe('InstallUrls', () => {
 
   it(
     'should flash a Copied confirmation after a successful clipboard write',
-    withInstallUrlsTest({ sessionTokenResponse: 'tk' })(async () => {
+    withInstallUrlsHarness(async ({ renderHost }) => {
+      mockedStartAddonSession.mockResolvedValueOnce('tk');
+      await renderHost();
+
       const copyButton = await screen.findByRole('button', {
         name: /copy stremio addon manifest url/i,
       });
@@ -183,27 +187,31 @@ describe('InstallUrls', () => {
 
   it(
     'should show a copy-failed message when clipboard.writeText rejects',
-    withInstallUrlsTest({ sessionTokenResponse: 'tk' })(
-      async (clipboardSpy) => {
-        clipboardSpy.mockRejectedValueOnce(new Error('denied'));
-        const copyButton = await screen.findByRole('button', {
-          name: /copy stremio addon manifest url/i,
-        });
-        await userEvent.click(copyButton);
-        expect(await screen.findByText(/copy failed/i)).toBeTruthy();
-      },
-    ),
+    withInstallUrlsHarness(async ({ clipboardSpy, renderHost }) => {
+      mockedStartAddonSession.mockResolvedValueOnce('tk');
+      await renderHost();
+
+      clipboardSpy.mockRejectedValueOnce(new Error('denied'));
+      const copyButton = await screen.findByRole('button', {
+        name: /copy stremio addon manifest url/i,
+      });
+      await userEvent.click(copyButton);
+      expect(await screen.findByText(/copy failed/i)).toBeTruthy();
+    }),
   );
 
   it(
     'should refetch a session token when Retry is clicked after a failure',
-    withInstallUrlsTest({
-      sessionFailure: new HttpError({
-        status: 503,
-        statusText: 'Service Unavailable',
-        responseBody: { message: 'Jellyfin is restarting' },
-      }),
-    })(async () => {
+    withInstallUrlsHarness(async ({ renderHost }) => {
+      mockedStartAddonSession.mockRejectedValueOnce(
+        new HttpError({
+          status: 503,
+          statusText: 'Service Unavailable',
+          responseBody: { message: 'Jellyfin is restarting' },
+        }),
+      );
+      await renderHost();
+
       await screen.findByText(/HTTP 503: Jellyfin is restarting/i);
       mockedStartAddonSession.mockResolvedValueOnce('SECOND_TOKEN');
 
