@@ -459,11 +459,7 @@ public class AddonController : ControllerBase
                     var requestUrl = $"{baseUrl}/jelliopp/{Request.RouteValues["config"]}/jellyseerr?type=movie&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}";
                     var streams = new[]
                     {
-                        // externalUrl instead of url: tells clients to open in browser rather than
-                        // play as a stream. This prevents eager-loading clients (e.g. Arvio) from
-                        // pre-fetching the URL on the detail page and accidentally triggering the
-                        // Jellyseerr request before the user explicitly chooses it.
-                        new { externalUrl = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
+                        new { url = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
                     };
                     return Ok(new { streams });
                 }
@@ -514,8 +510,7 @@ public class AddonController : ControllerBase
                     var requestUrl = $"{baseUrl}/jelliopp/{Request.RouteValues["config"]}/jellyseerr?type=tv&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}&season={seasonNum}&episode={episodeNum}";
                     var streams = new[]
                     {
-                        // externalUrl: see movie handler above for explanation
-                        new { externalUrl = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
+                        new { url = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
                     };
                     return Ok(new { streams });
                 }
@@ -550,8 +545,7 @@ public class AddonController : ControllerBase
                     var requestUrl = $"{baseUrl}/jelliopp/{Request.RouteValues["config"]}/jellyseerr?type=tv&imdbId=tt{imdbId}&title={Uri.EscapeDataString(title)}&season={seasonNum}&episode={episodeNum}";
                     var streams = new[]
                     {
-                        // externalUrl: see movie handler above for explanation
-                        new { externalUrl = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
+                        new { url = requestUrl, name = "📥 Request via Jellyseerr", description = "Click to send request to Jellyseerr" }
                     };
                     return Ok(new { streams });
                 }
