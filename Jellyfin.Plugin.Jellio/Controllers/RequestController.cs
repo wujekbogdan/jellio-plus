@@ -111,7 +111,34 @@ public class RequestController : ControllerBase
             var identifier = imdbId ?? tmdbId?.ToString(System.Globalization.CultureInfo.InvariantCulture) ?? title ?? "unknown";
             if (!TryMarkAsProcessing(userId.Value, identifier, type))
             {
-                return Content("✓ Request already sent (duplicate prevented)", "text/plain");
+                var dupHtml = """
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                      <meta charset="utf-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
+                      <title>Jellyseerr – Already Requested</title>
+                      <style>
+                        body { font-family: sans-serif; background: #1a1a2e; color: #e0e0e0;
+                               display: flex; align-items: center; justify-content: center;
+                               min-height: 100vh; margin: 0; }
+                        .card { background: #16213e; border-radius: 12px; padding: 40px 50px;
+                                max-width: 500px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,.5); }
+                        .icon { font-size: 3rem; margin-bottom: 16px; }
+                        h1 { color: #facc15; margin: 0 0 12px; font-size: 1.6rem; }
+                        p { color: #9ca3af; margin: 0; line-height: 1.5; }
+                      </style>
+                    </head>
+                    <body>
+                      <div class="card">
+                        <div class="icon">⏳</div>
+                        <h1>Already requested</h1>
+                        <p>This request was already sent recently. Duplicate prevented.</p>
+                      </div>
+                    </body>
+                    </html>
+                    """;
+                return Content(dupHtml, "text/html");
             }
 
             var configMsg = $"[Jellyseerr] Config loaded: Enabled={config.JellyseerrEnabled}, Url={config.JellyseerrUrl}, HasApiKey={!string.IsNullOrWhiteSpace(config.JellyseerrApiKey)}";
@@ -219,16 +246,72 @@ public class RequestController : ControllerBase
             {
                 Console.WriteLine("[Jellyseerr] ✓ Request successful!");
 
-                // Already marked in cache at the start, no need to mark again
-
-                // Return a simple success message
-                // Stremio will attempt to play this URL, fail gracefully, but the request is already sent
-                return Content("✓ Content request sent to Jellyseerr successfully!", "text/plain");
+                var displayTitle = !string.IsNullOrWhiteSpace(title) ? title : imdbId ?? "content";
+                var successHtml = $"""
+                    <!DOCTYPE html>
+                    <html lang="en">
+                    <head>
+                      <meta charset="utf-8">
+                      <meta name="viewport" content="width=device-width, initial-scale=1">
+                      <title>Jellyseerr – Request Sent</title>
+                      <style>
+                        body {{ font-family: sans-serif; background: #1a1a2e; color: #e0e0e0;
+                               display: flex; align-items: center; justify-content: center;
+                               min-height: 100vh; margin: 0; }}
+                        .card {{ background: #16213e; border-radius: 12px; padding: 40px 50px;
+                                 max-width: 500px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,.5); }}
+                        .icon {{ font-size: 3rem; margin-bottom: 16px; }}
+                        h1 {{ color: #4ade80; margin: 0 0 12px; font-size: 1.6rem; }}
+                        p {{ color: #9ca3af; margin: 0; line-height: 1.5; }}
+                        .title {{ color: #e0e0e0; font-weight: bold; }}
+                      </style>
+                    </head>
+                    <body>
+                      <div class="card">
+                        <div class="icon">✅</div>
+                        <h1>Request sent!</h1>
+                        <p>Your request for <span class="title">{System.Web.HttpUtility.HtmlEncode(displayTitle)}</span>
+                           has been submitted to Jellyseerr.<br>You can close this tab.</p>
+                      </div>
+                    </body>
+                    </html>
+                    """;
+                return Content(successHtml, "text/html");
             }
 
             var failContent = await createResp.Content.ReadAsStringAsync();
             Console.WriteLine($"[Jellyseerr] ERROR: Request failed with: {failContent}");
-            return Problem($"Jellyseerr request failed with status {(int)createResp.StatusCode}.", statusCode: 502);
+
+            var errorHtml = $"""
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <title>Jellyseerr – Request Failed</title>
+                  <style>
+                    body {{ font-family: sans-serif; background: #1a1a2e; color: #e0e0e0;
+                             display: flex; align-items: center; justify-content: center;
+                             min-height: 100vh; margin: 0; }}
+                    .card {{ background: #16213e; border-radius: 12px; padding: 40px 50px;
+                             max-width: 500px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,.5); }}
+                    .icon {{ font-size: 3rem; margin-bottom: 16px; }}
+                    h1 {{ color: #f87171; margin: 0 0 12px; font-size: 1.6rem; }}
+                    p {{ color: #9ca3af; margin: 0; line-height: 1.5; }}
+                    code {{ background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: .85rem; }}
+                  </style>
+                </head>
+                <body>
+                  <div class="card">
+                    <div class="icon">❌</div>
+                    <h1>Request failed</h1>
+                    <p>Jellyseerr returned status <code>{(int)createResp.StatusCode}</code>.<br>
+                       Check your Jellyseerr configuration and API key.</p>
+                  </div>
+                </body>
+                </html>
+                """;
+            return Content(errorHtml, "text/html", System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
@@ -238,7 +321,37 @@ public class RequestController : ControllerBase
             Console.WriteLine(stackMsg);
             LogBuffer.AddLog(errorMsg, LogLevel.Error);
             LogBuffer.AddLog(stackMsg, LogLevel.Error);
-            return Problem($"Error creating Jellyseerr request: {ex.Message}", statusCode: 500);
+
+            var exHtml = $"""
+                <!DOCTYPE html>
+                <html lang="en">
+                <head>
+                  <meta charset="utf-8">
+                  <meta name="viewport" content="width=device-width, initial-scale=1">
+                  <title>Jellyseerr – Error</title>
+                  <style>
+                    body {{ font-family: sans-serif; background: #1a1a2e; color: #e0e0e0;
+                             display: flex; align-items: center; justify-content: center;
+                             min-height: 100vh; margin: 0; }}
+                    .card {{ background: #16213e; border-radius: 12px; padding: 40px 50px;
+                             max-width: 500px; text-align: center; box-shadow: 0 4px 30px rgba(0,0,0,.5); }}
+                    .icon {{ font-size: 3rem; margin-bottom: 16px; }}
+                    h1 {{ color: #f87171; margin: 0 0 12px; font-size: 1.6rem; }}
+                    p {{ color: #9ca3af; margin: 0; line-height: 1.5; }}
+                    code {{ background: #0f3460; padding: 2px 6px; border-radius: 4px; font-size: .85rem; word-break: break-all; }}
+                  </style>
+                </head>
+                <body>
+                  <div class="card">
+                    <div class="icon">⚠️</div>
+                    <h1>Unexpected error</h1>
+                    <p><code>{System.Web.HttpUtility.HtmlEncode(ex.Message)}</code><br><br>
+                       Check the Jellyfin plugin logs for details.</p>
+                  </div>
+                </body>
+                </html>
+                """;
+            return Content(exHtml, "text/html", System.Text.Encoding.UTF8);
         }
     }
 }
