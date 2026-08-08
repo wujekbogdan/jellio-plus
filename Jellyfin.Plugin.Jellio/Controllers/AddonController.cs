@@ -27,7 +27,7 @@ namespace Jellyfin.Plugin.Jellio.Controllers;
 [ConfigAuthorize]
 [Route("jelliopp/{config}")]
 [Produces(MediaTypeNames.Application.Json)]
-public class AddonController : ControllerBase
+public partial class AddonController : ControllerBase
 {
     private static readonly string PluginVersion =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
@@ -194,7 +194,7 @@ public class AddonController : ControllerBase
                     ["videoCodec"] = string.Join(',', videoCodecs),
                     ["audioCodec"] = string.Join(',', audioCodecs),
                 });
-                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{query}";
+                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/stream.mp4{query}&static=true";
                 LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
                 return new StreamDto
                 {
@@ -206,7 +206,7 @@ public class AddonController : ControllerBase
                         Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
                         VideoSize = source.Size,
                         VideoHash = OpenSubtitlesHash.ComputeFromPath(source.Path),
-                        NotWebReady = true,
+                        NotWebReady = false,
                     },
                 };
             });
@@ -260,6 +260,7 @@ public class AddonController : ControllerBase
             {
                 "catalog",
                 "stream",
+                "subtitles",
                 new
                 {
                     name = "meta",
