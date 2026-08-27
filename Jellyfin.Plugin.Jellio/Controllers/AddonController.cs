@@ -27,7 +27,7 @@ namespace Jellyfin.Plugin.Jellio.Controllers;
 [ConfigAuthorize]
 [Route("jelliopp/{config}")]
 [Produces(MediaTypeNames.Application.Json)]
-public class AddonController : ControllerBase
+public partial class AddonController : ControllerBase
 {
     private static readonly string PluginVersion =
         Assembly.GetExecutingAssembly().GetName().Version?.ToString(3) ?? "0.0.0";
@@ -260,6 +260,7 @@ public class AddonController : ControllerBase
             {
                 "catalog",
                 "stream",
+                "subtitles",
                 new
                 {
                     name = "meta",
