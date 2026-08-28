@@ -35,19 +35,50 @@ public partial class AddonController
         return GetSubtitlesByImdbId(config, imdbId, BaseItemKind.Movie, extra);
     }
 
-    // Series subtitle requests come to us keyed by the *episode's* IMDb id (Stremio
-    // resolves "tt<id>:<season>:<episode>" through Cinemeta before calling us), not the
-    // series' own id - unlike the movie route above, so querying IncludeItemTypes=Series
-    // here (as the initial PR did) always returned zero items for series. Match Episode
-    // instead, same as GetStreamImdbTv does for the equivalent stream route.
+    // Per Stremio's own protocol/convention (and confirmed live against Stremio's
+    // first-party OpenSubtitles v3 addon, e.g. subtitles/series/tt0388629:1:763/*.json
+    // for "One Piece", where tt0388629 is the *series'* IMDb id), the id in
+    // "tt<id>:<season>:<episode>" is the series' own IMDb id, not the episode's -
+    // matching how the stream route (GetStreamImdbTv) already resolves series first,
+    // then the specific episode by ancestor + season/episode index.
     [HttpGet("subtitles/series/tt{imdbId}:{seasonNum:int}:{episodeNum:int}.json")]
     [HttpGet("subtitles/series/tt{imdbId}:{seasonNum:int}:{episodeNum:int}/{extra}.json")]
     public IActionResult GetSubtitlesImdbSeries([ConfigFromBase64Json] ConfigModel config, string imdbId, int seasonNum, int episodeNum, string? extra = null)
     {
-        return GetSubtitlesByImdbId(config, imdbId, BaseItemKind.Episode, extra, seasonNum, episodeNum);
+        var userId = (Guid)HttpContext.Items["JellioUserId"]!;
+        LogBuffer.AddLog($"[Subtitles] req imdb=tt{imdbId} kind=Series season={seasonNum} episode={episodeNum} extra={extra}", LogLevel.Info);
+        var user = _userManager.GetUserById(userId);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        var seriesQuery = new InternalItemsQuery(user)
+        {
+            HasAnyProviderId = new Dictionary<string, string> { ["Imdb"] = $"tt{imdbId}" },
+            IncludeItemTypes = [BaseItemKind.Series],
+        };
+        var seriesItems = _libraryManager.GetItemList(seriesQuery);
+
+        if (seriesItems.Count == 0)
+        {
+            return BuildSubtitlesResult(userId, [], config.AuthToken, config.PublicBaseUrl);
+        }
+
+        var seriesIds = seriesItems.Select(s => s.Id).ToArray();
+        var episodeQuery = new InternalItemsQuery(user)
+        {
+            IncludeItemTypes = [BaseItemKind.Episode],
+            AncestorIds = seriesIds,
+            ParentIndexNumber = seasonNum,
+            IndexNumber = episodeNum,
+        };
+        var episodeItems = _libraryManager.GetItemList(episodeQuery);
+
+        return BuildSubtitlesResult(userId, episodeItems, config.AuthToken, config.PublicBaseUrl);
     }
 
-    private IActionResult GetSubtitlesByImdbId(ConfigModel config, string imdbId, BaseItemKind itemKind, string? extra, int? seasonNum = null, int? episodeNum = null)
+    private IActionResult GetSubtitlesByImdbId(ConfigModel config, string imdbId, BaseItemKind itemKind, string? extra)
     {
         var userId = (Guid)HttpContext.Items["JellioUserId"]!;
         LogBuffer.AddLog($"[Subtitles] req imdb=tt{imdbId} kind={itemKind} extra={extra}", LogLevel.Info);
@@ -64,11 +95,6 @@ public partial class AddonController
         };
 
         IReadOnlyList<BaseItem> items = _libraryManager.GetItemList(query);
-
-        if (itemKind == BaseItemKind.Episode && seasonNum.HasValue && episodeNum.HasValue)
-        {
-            items = items.Where(i => i.ParentIndexNumber == seasonNum && i.IndexNumber == episodeNum).ToList();
-        }
 
         return BuildSubtitlesResult(userId, items, config.AuthToken, config.PublicBaseUrl);
     }
