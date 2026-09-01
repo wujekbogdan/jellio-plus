@@ -175,32 +175,39 @@ public class AddonController : ControllerBase
 
             return dto.MediaSources.Select(source =>
             {
-                /*
-                 * Jellyfin's HLS endpoint requires the caller to declare which codecs the player supports.
-                 * It compares these against the media file's codecs to decide whether to pass through without re-encoding or transcode.
-                 *
-                 * Stremio's addon protocol has no mechanism for the client to advertise its codec capabilities to addons, so we hardcode them here. The lists below reflect what Stremio's players can decode. This is the same pattern every Jellyfin client follows - e.g. jellyfin-web builds its codec list.
-                 * See: https://github.com/jellyfin/jellyfin-web/blob/285196329/src/scripts/browserDeviceProfile.js#L914-L925
-                 *
-                 * Without these params Jellyfin would fall back to "m3u8" as the audio codec name, producing invalid FFmpeg commands.
-                 * See: https://github.com/jellyfin/jellyfin/issues/12926
-                 */
-                string[] videoCodecs = ["h264", "hevc", "av1"];
-                string[] audioCodecs = ["aac", "mp3", "ac3", "eac3", "flac", "opus"];
+                var ext = "mp4";
+                if (!string.IsNullOrWhiteSpace(source.Path))
+                {
+                    var pathExt = Path.GetExtension(source.Path);
+                    if (!string.IsNullOrWhiteSpace(pathExt))
+                    {
+                        ext = pathExt.TrimStart('.').ToLowerInvariant();
+                    }
+                }
+                else if (!string.IsNullOrWhiteSpace(source.Container))
+                {
+                    ext = source.Container.Split(',')[0].Trim().ToLowerInvariant();
+                    if (ext == "matroska")
+                    {
+                        ext = "mkv";
+                    }
+                }
+
                 var query = QueryString.Create(new Dictionary<string, string?>
                 {
+                    ["static"] = "true",
                     ["mediaSourceId"] = source.Id,
                     ["api_key"] = authToken,
-                    ["videoCodec"] = string.Join(',', videoCodecs),
-                    ["audioCodec"] = string.Join(',', audioCodecs),
                 });
-                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{query}";
-                LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
+var streamUrl = $"{baseUrl}/Videos/{dto.Id}/stream.{ext}{query}";
+var logStreamUrl = $"{baseUrl}/Videos/{dto.Id}/stream.{ext}?static=true&mediaSourceId={source.Id}&api_key=***";
+LogBuffer.AddLog($"[Stream] Generated Direct Play stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {logStreamUrl}", LogLevel.Info);
+                
                 return new StreamDto
                 {
                     Url = streamUrl,
                     Name = "Jellio++",
-                    Description = source.Name,
+                    Description = $"Direct Play - {source.Name}",
                     BehaviorHints = new BehaviorHintsDto
                     {
                         Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
