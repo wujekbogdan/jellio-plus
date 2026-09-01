@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellio.Helpers;
 using Jellyfin.Plugin.Jellio.Models;
+using Jellyfin.Plugin.Jellio.Streams;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -173,7 +174,10 @@ public class AddonController : ControllerBase
                 return Enumerable.Empty<StreamDto>();
             }
 
-            return dto.MediaSources.Select(source =>
+            var mediaSources = dto.MediaSources.ToList();
+            var isMultiMediaSource = mediaSources.Count > 1;
+
+            return mediaSources.SelectMany(source =>
             {
                 /*
                  * Jellyfin's HLS endpoint requires the caller to declare which codecs the player supports.
@@ -187,28 +191,56 @@ public class AddonController : ControllerBase
                  */
                 string[] videoCodecs = ["h264", "hevc", "av1"];
                 string[] audioCodecs = ["aac", "mp3", "ac3", "eac3", "flac", "opus"];
-                var query = QueryString.Create(new Dictionary<string, string?>
+
+                string DescribeEntry(AudioTrackChoice? audioTrack)
                 {
-                    ["mediaSourceId"] = source.Id,
-                    ["api_key"] = authToken,
-                    ["videoCodec"] = string.Join(',', videoCodecs),
-                    ["audioCodec"] = string.Join(',', audioCodecs),
-                });
-                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{query}";
-                LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
-                return new StreamDto
-                {
-                    Url = streamUrl,
-                    Name = "Jellio++",
-                    Description = source.Name,
-                    BehaviorHints = new BehaviorHintsDto
+                    if (audioTrack is null)
                     {
-                        Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
-                        VideoSize = source.Size,
-                        VideoHash = OpenSubtitlesHash.ComputeFromPath(source.Path),
-                        NotWebReady = true,
-                    },
-                };
+                        return source.Name;
+                    }
+
+                    return isMultiMediaSource ? $"{audioTrack.Label} · {source.Name}" : audioTrack.Label;
+                }
+
+                StreamDto BuildEntry(AudioTrackChoice? audioTrack)
+                {
+                    // QueryString.Create writes a null value as "audioStreamIndex=", so the key is absent when no track is selected.
+                    KeyValuePair<string, string?>[] selectedTrack = audioTrack is null
+                        ? []
+                        : [new("audioStreamIndex", audioTrack.StreamIndex.ToString(CultureInfo.InvariantCulture))];
+
+                    KeyValuePair<string, string?>[] parameters =
+                    [
+                        new("mediaSourceId", source.Id),
+                        new("api_key", authToken),
+                        new("videoCodec", string.Join(',', videoCodecs)),
+                        new("audioCodec", string.Join(',', audioCodecs)),
+                        .. selectedTrack,
+                    ];
+
+                    var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{QueryString.Create(parameters)}";
+                    LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
+                    return new StreamDto
+                    {
+                        Url = streamUrl,
+                        Name = "Jellio++",
+                        Description = DescribeEntry(audioTrack),
+                        BehaviorHints = new BehaviorHintsDto
+                        {
+                            Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
+                            VideoSize = source.Size,
+                            VideoHash = OpenSubtitlesHash.ComputeFromPath(source.Path),
+                            NotWebReady = true,
+                        },
+                    };
+                }
+
+                var audioTracks = AudioTrackSelection.ForSource(source);
+                LogBuffer.AddLog($"[Stream] Source \"{source.Name}\": {audioTracks.Count} selectable audio track(s)", LogLevel.Info);
+                IEnumerable<StreamDto> entries = audioTracks.Count == 0
+                    ? [BuildEntry(audioTrack: null)]
+                    : audioTracks.Select(audioTrack => BuildEntry(audioTrack));
+                return entries;
             });
         }).ToList();
 
