@@ -34,4 +34,9 @@
     <EmbeddedResource Include="Web\index.html" />
   </ItemGroup>
 
+  <Target Name="RequireWebBundle" BeforeTargets="CoreCompile">
+    <Error Condition="!Exists('Web\index.html')"
+           Text="Web\index.html is missing. Build it with 'npm run build' in jellio-web, then copy dist/index.html here." />
+  </Target>
+
 </Project>
