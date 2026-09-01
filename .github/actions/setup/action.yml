@@ -1,0 +1,22 @@
+name: Setup
+description: Install dependencies.
+
+runs:
+  using: composite
+  steps:
+    - name: Setup .NET 9
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: '9.0.305'
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v7
+      with:
+        node-version-file: .nvmrc
+        cache: npm
+        cache-dependency-path: jellio-web/package-lock.json
+
+    - name: Install Frontend Dependencies
+      run: npm ci
+      shell: bash
+      working-directory: jellio-web

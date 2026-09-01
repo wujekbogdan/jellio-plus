@@ -5,29 +5,22 @@ on:
     types: [created]
 
 jobs:
+  test:
+    uses: ./.github/workflows/test.yml
+
   release:
-    runs-on: ubuntu-latest
+    needs: test
+    runs-on: ubuntu-24.04
 
     permissions:
       contents: write
 
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
-      - name: Setup .NET 9
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '9.0.x'
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install Frontend Dependencies
-        run: npm ci
-        working-directory: jellio-web
+      - name: Setup
+        uses: ./.github/actions/setup
 
       - name: Build Frontend Single-File
         run: npm run build
@@ -77,9 +70,6 @@ jobs:
         env:
           RELEASE_BODY: ${{ github.event.release.body }}
 
-      - name: Run Tests
-        run: dotnet test --verbosity normal
-
       - name: Build Jellyfin Plugin & Package ZIP (net9)
         uses: oddstr13/jellyfin-plugin-repository-manager@v1.1.1
         id: jprm
@@ -109,7 +99,7 @@ jobs:
           mv "${{ steps.filename.outputs.zip_full_path }}" "/home/runner/work/plugin.zip.tmp"
 
       - name: Checkout Metadata Branch
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           ref: metadata
           clean: true

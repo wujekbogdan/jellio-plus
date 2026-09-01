@@ -1,0 +1,22 @@
+name: Test
+
+on:
+  workflow_call:
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+
+      - name: Setup
+        uses: ./.github/actions/setup
+
+      - name: Run .NET Tests
+        run: dotnet test Jellyfin.Plugin.Jellio.Tests/Jellyfin.Plugin.Jellio.Tests.csproj --verbosity normal
+
+      - name: Run Frontend Tests
+        run: npm test -- --run
+        working-directory: jellio-web
