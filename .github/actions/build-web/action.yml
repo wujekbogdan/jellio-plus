@@ -1,0 +1,14 @@
+name: Build Web
+description: Build the frontend bundle into the plugin web directory.
+
+runs:
+  using: composite
+  steps:
+    - name: Build Frontend Single-File
+      run: npm run build
+      shell: bash
+      working-directory: jellio-web
+
+    - name: Copy Frontend Bundle to Plugin Web
+      run: cp jellio-web/dist/index.html Jellyfin.Plugin.Jellio/Web/index.html
+      shell: bash
