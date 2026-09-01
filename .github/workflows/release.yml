@@ -22,12 +22,8 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
-      - name: Build Frontend Single-File
-        run: npm run build
-        working-directory: jellio-web
-
-      - name: Copy Frontend Bundle to Plugin Web
-        run: cp jellio-web/dist/index.html Jellyfin.Plugin.Jellio/Web/index.html
+      - name: Build Web
+        uses: ./.github/actions/build-web
 
       - name: Extract Release Version Number
         id: version

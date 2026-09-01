@@ -14,6 +14,9 @@ jobs:
       - name: Setup
         uses: ./.github/actions/setup
 
+      - name: Build Web
+        uses: ./.github/actions/build-web
+
       - name: Run .NET Tests
         run: dotnet test Jellyfin.Plugin.Jellio.Tests/Jellyfin.Plugin.Jellio.Tests.csproj --verbosity normal
 
