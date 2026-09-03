@@ -194,7 +194,16 @@ public class AddonController : ControllerBase
                     ["videoCodec"] = string.Join(',', videoCodecs),
                     ["audioCodec"] = string.Join(',', audioCodecs),
                 });
-                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{query}";
+                /*
+                 * static=true requests direct play (the source file as-is) instead of the HLS
+                 * master.m3u8 endpoint. HLS runs ffmpeg with -map -0:s, stripping every subtitle
+                 * stream from the transcoded output, so subtitles served via the subtitles
+                 * resource never lined up with a playable track under HLS. static=true keeps
+                 * the source file (and its subtitle tracks) intact; the codec/mediaSourceId
+                 * params above still let Jellyfin fall back to transcoding when the source
+                 * cannot be played back directly.
+                 */
+                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/stream.mp4{query}&static=true";
                 LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
                 return new StreamDto
                 {
@@ -206,7 +215,7 @@ public class AddonController : ControllerBase
                         Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
                         VideoSize = source.Size,
                         VideoHash = OpenSubtitlesHash.ComputeFromPath(source.Path),
-                        NotWebReady = true,
+                        NotWebReady = false,
                     },
                 };
             });
