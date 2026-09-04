@@ -46,6 +46,21 @@ NOTICE: Your Jellyfin instance needs to be reachable over HTTPS because Stremio 
 8. Click "Save Configuration for Jellyfin"
 9. Lastly, click "Install." Copy that link and paste it in your Stremio addons. You're all done!
 
+## Known Issues & Gotchas
+
+### Short clips have no seekbar in Stremio
+
+Stremio does not show a seekbar for short videos. You can play and pause, but you cannot seek. Full-length movies work normally. The limitation is in Stremio's player, not in Jellio++, so the plugin cannot work around it.
+
+### HDR videos show two stream entries
+
+For HDR videos, Jellio++ lists two stream entries instead of one. Pick the one your device can play:
+
+- **Direct Play** - the original HDR file. Try this first. It's not guaranteed to work on all devices.
+- **Adaptive** - a fallback that lets the Jellyfin server choose a version your device can handle. Use this only if Direct Play does not work.
+
+This works around a Jellyfin compatibility hack: for HDR videos, Jellyfin provides a low-quality fallback and Stremio picks the fallback instead of the high-quality video. See [#12](https://github.com/wujekbogdan/jellio-plus-plus/issues/12) for more details.
+
 ## Development
 
 ### Backend stack

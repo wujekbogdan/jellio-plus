@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.Jellio.Helpers;
 using Jellyfin.Plugin.Jellio.Models;
+using Jellyfin.Plugin.Jellio.Streams;
 using MediaBrowser.Controller.Dto;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.TV;
@@ -161,54 +162,40 @@ public class AddonController : ControllerBase
 
         var streams = dtos.SelectMany(dto =>
         {
-            int mediaSourceCount = 0;
-            if (dto.MediaSources != null)
-            {
-                mediaSourceCount = dto.MediaSources.Count();
-            }
-
-            LogBuffer.AddLog($"[Stream] Processing DTO: {dto.Name} (Id: {dto.Id}, MediaSources: {mediaSourceCount})", LogLevel.Info);
             if (dto.MediaSources == null)
             {
+                LogBuffer.AddLog($"[Stream] Processing DTO: {dto.Name} (Id: {dto.Id}, MediaSources: 0)", LogLevel.Info);
                 return Enumerable.Empty<StreamDto>();
             }
 
-            return dto.MediaSources.Select(source =>
+            var mediaSources = dto.MediaSources.ToList();
+            LogBuffer.AddLog($"[Stream] Processing DTO: {dto.Name} (Id: {dto.Id}, MediaSources: {mediaSources.Count})", LogLevel.Info);
+            var isMultiMediaSource = mediaSources.Count > 1;
+
+            return mediaSources.SelectMany((source, index) =>
             {
-                /*
-                 * Jellyfin's HLS endpoint requires the caller to declare which codecs the player supports.
-                 * It compares these against the media file's codecs to decide whether to pass through without re-encoding or transcode.
-                 *
-                 * Stremio's addon protocol has no mechanism for the client to advertise its codec capabilities to addons, so we hardcode them here. The lists below reflect what Stremio's players can decode. This is the same pattern every Jellyfin client follows - e.g. jellyfin-web builds its codec list.
-                 * See: https://github.com/jellyfin/jellyfin-web/blob/285196329/src/scripts/browserDeviceProfile.js#L914-L925
-                 *
-                 * Without these params Jellyfin would fall back to "m3u8" as the audio codec name, producing invalid FFmpeg commands.
-                 * See: https://github.com/jellyfin/jellyfin/issues/12926
-                 */
-                string[] videoCodecs = ["h264", "hevc", "av1"];
-                string[] audioCodecs = ["aac", "mp3", "ac3", "eac3", "flac", "opus"];
-                var query = QueryString.Create(new Dictionary<string, string?>
+                var entries = StreamEntryFactory.Build(new StreamEntryRequest
                 {
-                    ["mediaSourceId"] = source.Id,
-                    ["api_key"] = authToken,
-                    ["videoCodec"] = string.Join(',', videoCodecs),
-                    ["audioCodec"] = string.Join(',', audioCodecs),
+                    ItemId = dto.Id,
+                    MediaSource = source,
+                    IsMultiMediaSource = isMultiMediaSource,
+                    SourceIndex = index + 1,
+                    BaseUrl = baseUrl,
+                    AuthToken = authToken,
                 });
-                var streamUrl = $"{baseUrl}/Videos/{dto.Id}/master.m3u8{query}";
-                LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {streamUrl}", LogLevel.Info);
-                return new StreamDto
+                var videoStream = source.MediaStreams?.FirstOrDefault(stream => stream.Type == MediaStreamType.Video);
+                LogBuffer.AddLog(
+                    $"[Stream] Source \"{source.Name}\": codec={videoStream?.Codec ?? "n/a"}, " +
+                    $"range={videoStream?.VideoRange.ToString() ?? "n/a"}, " +
+                    $"rangeType={videoStream?.VideoRangeType.ToString() ?? "n/a"}, " +
+                    $"entries={entries.Count}",
+                    LogLevel.Info);
+                foreach (var entry in entries)
                 {
-                    Url = streamUrl,
-                    Name = "Jellio++",
-                    Description = source.Name,
-                    BehaviorHints = new BehaviorHintsDto
-                    {
-                        Filename = string.IsNullOrEmpty(source.Path) ? null : Path.GetFileName(source.Path),
-                        VideoSize = source.Size,
-                        VideoHash = OpenSubtitlesHash.ComputeFromPath(source.Path),
-                        NotWebReady = true,
-                    },
-                };
+                    LogBuffer.AddLog($"[Stream] Generated stream for {dto.Name} ({dto.Id}): {source.Name} - URL: {entry.Url}", LogLevel.Info);
+                }
+
+                return entries;
             });
         }).ToList();
 
